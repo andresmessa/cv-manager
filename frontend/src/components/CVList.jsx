@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { fileUrl } from "../api.js";
 
 function formatSize(bytes) {
@@ -34,43 +35,53 @@ export default function CVList({ cvs, loading, error, onEdit, onDelete, onReview
         </thead>
         <tbody>
           {cvs.map((cv) => (
-            <tr key={cv.id}>
-              <td>{cv.candidate_name}</td>
-              <td>
-                <a href={fileUrl(cv.id)} target="_blank" rel="noreferrer">
-                  {cv.original_filename}
-                </a>
-              </td>
-              <td>{formatSize(cv.size)}</td>
-              <td>{formatDate(cv.uploaded_at)}</td>
-              <td>
-                {cv.skills && cv.skills.length > 0 ? (
-                  <div className="skill-chips">
-                    {cv.skills.slice(0, MAX_VISIBLE_SKILLS).map((skill) => (
-                      <span className="skill-chip" key={skill}>
-                        {skill}
-                      </span>
-                    ))}
-                    {cv.skills.length > MAX_VISIBLE_SKILLS && (
-                      <span className="hint">+{cv.skills.length - MAX_VISIBLE_SKILLS} more</span>
-                    )}
+            <Fragment key={cv.id}>
+              <tr className="cv-row">
+                <td>{cv.candidate_name}</td>
+                <td>
+                  <a href={fileUrl(cv.id)} target="_blank" rel="noreferrer">
+                    {cv.original_filename}
+                  </a>
+                </td>
+                <td>{formatSize(cv.size)}</td>
+                <td>{formatDate(cv.uploaded_at)}</td>
+                <td>
+                  {cv.skills && cv.skills.length > 0 ? (
+                    <div className="skill-chips">
+                      {cv.skills.slice(0, MAX_VISIBLE_SKILLS).map((skill) => (
+                        <span className="skill-chip" key={skill}>
+                          {skill}
+                        </span>
+                      ))}
+                      {cv.skills.length > MAX_VISIBLE_SKILLS && (
+                        <span className="hint">+{cv.skills.length - MAX_VISIBLE_SKILLS} more</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="hint">Not reviewed</span>
+                  )}
+                </td>
+                <td>
+                  <div className="actions">
+                    <button className="secondary" onClick={() => onReviewSkills(cv)}>
+                      Review Skills
+                    </button>
+                    <button className="secondary" onClick={() => onEdit(cv)}>
+                      Edit
+                    </button>
+                    <button className="danger" onClick={() => onDelete(cv)}>
+                      Delete
+                    </button>
                   </div>
-                ) : (
-                  <span className="hint">Not reviewed</span>
-                )}
-              </td>
-              <td className="actions">
-                <button className="secondary" onClick={() => onReviewSkills(cv)}>
-                  Review Skills
-                </button>
-                <button className="secondary" onClick={() => onEdit(cv)}>
-                  Edit
-                </button>
-                <button className="danger" onClick={() => onDelete(cv)}>
-                  Delete
-                </button>
-              </td>
-            </tr>
+                </td>
+              </tr>
+              <tr className="cv-summary-row">
+                <td colSpan={6}>
+                  <span className="summary-label">QA/QM Summary:</span>{" "}
+                  {cv.summary ? cv.summary : <span className="hint">No summary available yet.</span>}
+                </td>
+              </tr>
+            </Fragment>
           ))}
         </tbody>
       </table>

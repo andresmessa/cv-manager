@@ -125,3 +125,82 @@ def extract_skills(text: str) -> list[str]:
                 found.append(canonical)
                 break
     return found
+
+
+# Job-title phrases that signal hands-on Quality Assurance / Quality Management
+# experience, ordered so more specific phrases are matched before generic ones.
+QUALITY_TITLE_PATTERNS = [
+    "quality assurance manager",
+    "quality control manager",
+    "quality assurance engineer",
+    "quality management",
+    "quality assurance",
+    "quality control",
+    "quality engineer",
+    "quality manager",
+    "qa manager",
+    "qa engineer",
+    "qc inspector",
+    "quality supervisor",
+    "quality director",
+    "quality analyst",
+    "quality lead",
+    "quality auditor",
+    "quality specialist",
+    "quality coordinator",
+]
+
+YEARS_EXPERIENCE_RE = re.compile(r"(\d{1,2})\+?\s*(?:years|yrs)\b", re.IGNORECASE)
+
+MAX_SUMMARY_SKILLS = 5
+
+
+def generate_summary(text: str | None, skills: list[str]) -> str:
+    """Builds a short paragraph highlighting the candidate's QA/QM experience.
+
+    Rule-based (keyword/title/years-of-experience detection over SKILL_TAXONOMY)
+    rather than model-generated, so it runs offline with no external API calls.
+    Deliberately name-free so it stays valid if the candidate name is edited later.
+    """
+    if not text or not text.strip():
+        return (
+            "No automatic summary is available because the document's text could not "
+            "be read. Review the CV manually to assess Quality Assurance / Quality "
+            "Management experience."
+        )
+
+    lowered = text.lower()
+
+    years = [int(y) for y in YEARS_EXPERIENCE_RE.findall(lowered)]
+    years = [y for y in years if 0 < y <= 50]
+    years_phrase = f"over {max(years)} years" if years else None
+
+    titles_found: list[str] = []
+    for pattern in QUALITY_TITLE_PATTERNS:
+        if re.search(re.escape(pattern), lowered) and pattern not in titles_found:
+            titles_found.append(pattern)
+    # Drop titles that are substrings of a more specific title already found
+    # (e.g. skip "quality assurance" when "quality assurance manager" matched).
+    titles_found = [t for t in titles_found if not any(t != o and t in o for o in titles_found)]
+
+    if not skills and not titles_found and not years_phrase:
+        return (
+            "No specific Quality Assurance or Quality Management experience could be "
+            "identified from this document. Review the CV manually to confirm the "
+            "candidate's background."
+        )
+
+    sentences = ["This candidate shows experience in Quality Assurance and Quality Management"]
+    if years_phrase:
+        sentences[0] += f", with {years_phrase} in quality-related roles"
+    sentences[0] += "."
+
+    if titles_found:
+        title_list = ", ".join(t.title() for t in titles_found[:3])
+        sentences.append(f"Their background includes roles such as {title_list}.")
+
+    if skills:
+        skill_list = ", ".join(skills[:MAX_SUMMARY_SKILLS])
+        sentences.append(f"Key areas of expertise highlighted in the CV include {skill_list}.")
+
+    return " ".join(sentences)

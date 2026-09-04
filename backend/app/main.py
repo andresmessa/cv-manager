@@ -55,23 +55,25 @@ async def upload_cv(file: UploadFile = File(...), candidate_name: str = Form("")
     if len(contents) == 0:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
+    text, note = skills_extractor.extract_text_from_bytes(contents, file.filename)
+    suggested_skills = skills_extractor.extract_skills(text) if text else []
+    summary = skills_extractor.generate_summary(text, suggested_skills)
+
     record = storage.create_cv(
         original_filename=file.filename,
         content_type=file.content_type,
         size=len(contents),
         candidate_name=candidate_name.strip(),
         file_bytes=contents,
+        summary=summary,
     )
-
-    text, note = skills_extractor.extract_text_from_bytes(contents, file.filename)
-    suggested_skills = skills_extractor.extract_skills(text) if text else []
 
     return {**record, "suggested_skills": suggested_skills, "extraction_note": note}
 
 
 @app.put("/api/cvs/{cv_id}")
 async def update_cv(cv_id: str, candidate_name: str | None = Form(None), file: UploadFile | None = File(None)):
-    new_filename = new_content_type = new_bytes = None
+    new_filename = new_content_type = new_bytes = new_summary = None
     new_size = None
 
     if file is not None and file.filename:
@@ -86,6 +88,9 @@ async def update_cv(cv_id: str, candidate_name: str | None = Form(None), file: U
         new_size = len(contents)
         new_bytes = contents
 
+        text, _note = skills_extractor.extract_text_from_bytes(contents, file.filename)
+        new_summary = skills_extractor.generate_summary(text, skills_extractor.extract_skills(text) if text else [])
+
     record = storage.update_cv(
         cv_id,
         candidate_name=candidate_name.strip() if candidate_name is not None else None,
@@ -93,6 +98,7 @@ async def update_cv(cv_id: str, candidate_name: str | None = Form(None), file: U
         new_content_type=new_content_type,
         new_size=new_size,
         new_file_bytes=new_bytes,
+        new_summary=new_summary,
     )
     if record is None:
         raise HTTPException(status_code=404, detail="CV not found.")

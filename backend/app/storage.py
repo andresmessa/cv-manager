@@ -30,6 +30,7 @@ def _read_all() -> list[dict]:
         records = json.load(f)
     for record in records:
         record.setdefault("skills", [])
+        record.setdefault("summary", "")
     return records
 
 
@@ -50,7 +51,14 @@ def get_cv(cv_id: str) -> dict | None:
     return next((r for r in records if r["id"] == cv_id), None)
 
 
-def create_cv(original_filename: str, content_type: str, size: int, candidate_name: str, file_bytes: bytes) -> dict:
+def create_cv(
+    original_filename: str,
+    content_type: str,
+    size: int,
+    candidate_name: str,
+    file_bytes: bytes,
+    summary: str = "",
+) -> dict:
     ext = Path(original_filename).suffix.lower()
     stored_filename = f"{uuid.uuid4()}{ext}"
     (UPLOADS_DIR / stored_filename).write_bytes(file_bytes)
@@ -64,6 +72,7 @@ def create_cv(original_filename: str, content_type: str, size: int, candidate_na
         "content_type": content_type,
         "size": size,
         "skills": [],
+        "summary": summary,
         "uploaded_at": now,
         "updated_at": now,
     }
@@ -83,6 +92,7 @@ def update_cv(
     new_content_type: str | None,
     new_size: int | None,
     new_file_bytes: bytes | None,
+    new_summary: str | None = None,
 ) -> dict | None:
     with _lock:
         records = _read_all()
@@ -106,6 +116,7 @@ def update_cv(
             record["content_type"] = new_content_type
             record["size"] = new_size
             record["skills"] = []
+            record["summary"] = new_summary or ""
 
         record["updated_at"] = datetime.now(timezone.utc).isoformat()
         _write_all(records)

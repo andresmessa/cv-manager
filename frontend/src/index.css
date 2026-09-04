@@ -178,6 +178,8 @@ button.danger:hover:not(:disabled) {
 
 .cv-table {
   width: 100%;
+  min-width: 720px;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
@@ -188,6 +190,37 @@ button.danger:hover:not(:disabled) {
   padding: 10px 8px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
+  overflow-wrap: break-word;
+}
+
+.cv-table th:nth-child(1),
+.cv-table td:nth-child(1) {
+  width: 14%;
+}
+
+.cv-table th:nth-child(2),
+.cv-table td:nth-child(2) {
+  width: 18%;
+}
+
+.cv-table th:nth-child(3),
+.cv-table td:nth-child(3) {
+  width: 8%;
+}
+
+.cv-table th:nth-child(4),
+.cv-table td:nth-child(4) {
+  width: 14%;
+}
+
+.cv-table th:nth-child(5),
+.cv-table td:nth-child(5) {
+  width: 28%;
+}
+
+.cv-table th:nth-child(6),
+.cv-table td:nth-child(6) {
+  width: 18%;
 }
 
 .cv-table th {
@@ -209,15 +242,29 @@ button.danger:hover:not(:disabled) {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.cv-summary-row td {
+  padding-top: 0;
+  padding-bottom: 14px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.summary-label {
+  font-weight: 600;
+  color: var(--text);
 }
 
 .skill-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-width: 280px;
+  max-width: 100%;
 }
 
 .skill-chip {
@@ -226,7 +273,9 @@ button.danger:hover:not(:disabled) {
   border-radius: 999px;
   padding: 3px 10px;
   font-size: 0.78rem;
-  white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .skill-chip-missing {
