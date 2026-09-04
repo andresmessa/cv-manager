@@ -41,7 +41,7 @@ def _write_all(records: list[dict]) -> None:
 def list_cvs() -> list[dict]:
     with _lock:
         records = _read_all()
-    return sorted(records, key=lambda r: r["uploaded_at"], reverse=True)
+    return sorted(records, key=lambda r: r["candidate_name"].lower())
 
 
 def get_cv(cv_id: str) -> dict | None:
