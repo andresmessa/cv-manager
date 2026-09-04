@@ -1,0 +1,11 @@
+cd "OneDrive - Pro QC International\Claude Code\FirstAppWithClaudeCode"
+cd backend
+.\venv\Scripts\Activate.ps1
+python -m uvicorn app.main:app --reload --port 8000
+
+Frontend (in a secdcond terminal):
+cd frontend
+npm run dev
+
+
+http://localhost:5173/
