@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -5,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from . import skills_extractor, storage
+from . import llm_matcher, skills_extractor, storage
+
+logger = logging.getLogger("uvicorn.error")
 
 app = FastAPI(title="CV Manager API")
 
@@ -25,6 +28,7 @@ class SkillsPayload(BaseModel):
 
 class JobDescriptionPayload(BaseModel):
     job_description: str
+    use_ai: bool = True
 
 
 def _validate_file(file: UploadFile) -> None:
@@ -148,11 +152,61 @@ def match_candidates(payload: JobDescriptionPayload):
     if not job_description:
         raise HTTPException(status_code=400, detail="Job description cannot be empty.")
 
-    jd_skills = skills_extractor.extract_skills(job_description)
-
     records = storage.list_cvs()
     reviewed = [r for r in records if r["skills"]]
     excluded_count = len(records) - len(reviewed)
+
+    if not reviewed:
+        return {
+            "job_description_skills": [],
+            "results": [],
+            "excluded_count": excluded_count,
+            "note": None,
+            "engine": None,
+        }
+
+    if not payload.use_ai:
+        return _keyword_match(job_description, reviewed, excluded_count)
+
+    try:
+        analysis = llm_matcher.rank_candidates(job_description, reviewed)
+    except llm_matcher.LLMMatchError as e:
+        logger.warning("Falling back to keyword matching: %s", e)
+        result = _keyword_match(job_description, reviewed, excluded_count)
+        fallback_note = "AI matching unavailable — showing keyword-based results."
+        result["note"] = f"{fallback_note} {result['note']}" if result["note"] else fallback_note
+        return result
+
+    by_id = {r["id"]: r for r in reviewed}
+    results = []
+    for ranking in analysis.rankings:
+        record = by_id[ranking.candidate_id]
+        results.append(
+            {
+                "id": record["id"],
+                "candidate_name": record["candidate_name"],
+                "original_filename": record["original_filename"],
+                "matched_skills": ranking.matched_skills,
+                "missing_skills": ranking.missing_skills,
+                "score": ranking.fit_score,
+                "match_percentage": ranking.fit_score,
+                "reasoning": ranking.reasoning,
+            }
+        )
+
+    results.sort(key=lambda r: (-r["score"], r["candidate_name"].lower()))
+
+    return {
+        "job_description_skills": analysis.required_skills,
+        "results": results,
+        "excluded_count": excluded_count,
+        "note": None,
+        "engine": "llm",
+    }
+
+
+def _keyword_match(job_description: str, reviewed: list[dict], excluded_count: int) -> dict:
+    jd_skills = skills_extractor.extract_skills(job_description)
 
     if not jd_skills:
         return {
@@ -161,6 +215,7 @@ def match_candidates(payload: JobDescriptionPayload):
             "excluded_count": excluded_count,
             "note": "No recognized quality engineering skills were found in this job description. "
             "Try including specific tools, certifications, or methodologies (e.g. Six Sigma, ISO 9001, SPC).",
+            "engine": "keyword",
         }
 
     results = []
@@ -187,6 +242,7 @@ def match_candidates(payload: JobDescriptionPayload):
         "results": results,
         "excluded_count": excluded_count,
         "note": None,
+        "engine": "keyword",
     }
 
 

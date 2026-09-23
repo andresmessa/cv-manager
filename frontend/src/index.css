@@ -335,6 +335,11 @@ button.danger:hover:not(:disabled) {
   margin-top: 8px;
 }
 
+.match-reasoning {
+  font-size: 0.9rem;
+  margin: 6px 0 0;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -402,4 +407,18 @@ button.danger:hover:not(:disabled) {
 
 .add-skill-input input[type="text"] {
   flex: 1;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.toggle .hint {
+  margin: 0;
 }
