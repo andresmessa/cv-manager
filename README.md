@@ -4,6 +4,7 @@ A small web app for managing candidate CVs (PDF/DOC/DOCX) for quality-engineerin
 
 - **Upload, list, update and delete CVs.**
 - **Skills review** — quality-engineering skills are suggested from each CV's text; the user confirms them before they're saved.
+- **QA/QM summary** — a short rule-based summary of each candidate's quality experience.
 - **Find best-fit candidates** — paste a job description (free text) and get a ranked list of candidates based on their reviewed skills. Ranking uses keyword matching by default (no API call); switch on the AI toggle to have **Claude** (Anthropic API) rank candidates instead.
 
 - **Backend**: Python + FastAPI. Stores files on local disk (`backend/data/uploads/`) and metadata in a JSON file (`backend/data/metadata.json`).
@@ -45,6 +46,15 @@ npm run dev
 
 The app will be available at `http://localhost:5173`. It proxies `/api` requests to the backend on port 8000, so run both servers at the same time.
 
+## Reviewing and updating skills
+
+- **New upload** — the **Review Skills** dialog opens immediately with the skills detected in the CV. Nothing is saved until you click save.
+- **Edit → replace file** — the dialog opens immediately, the same as a new upload. It's pre-filled with the skills detected in the new file **plus any skills you added by hand** (skills that aren't on the built-in list, so they can't be re-detected). Skills detected from the old file are dropped, since they may no longer apply. If you close the dialog without saving, your hand-added skills stay saved and you can finish with **Review Skills** later.
+- **Edit → name only** — skills are left unchanged.
+- **Review Skills** (any time) — shows the saved skills plus any new suggestions from the stored file.
+
+Candidates with no saved skills are left out of matching.
+
 ## Finding best-fit candidates
 
 Only candidates whose skills have been reviewed are considered.
@@ -63,7 +73,7 @@ Only each candidate's id and reviewed skills are sent to Claude — no names, fi
 | ------ | ---------------------------------- | ----------- |
 | GET    | `/api/cvs`                         | List all uploaded CVs |
 | POST   | `/api/cvs`                         | Upload a new CV (`file`, optional `candidate_name`); returns suggested skills |
-| PUT    | `/api/cvs/{id}`                    | Update a CV's candidate name and/or file |
+| PUT    | `/api/cvs/{id}`                    | Update a CV's candidate name and/or file; a new file returns suggested skills and keeps only hand-added ones |
 | DELETE | `/api/cvs/{id}`                    | Delete a CV |
 | GET    | `/api/cvs/{id}/file`               | Download/view the stored file |
 | GET    | `/api/cvs/{id}/skills/suggestions` | Re-extract suggested skills from the stored file |

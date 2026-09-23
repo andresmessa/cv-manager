@@ -13,8 +13,7 @@ export default function EditCVModal({ cv, onClose, onUpdated }) {
     setError("");
     setSubmitting(true);
     try {
-      await updateCV(cv.id, { candidateName: candidateName.trim(), file });
-      onUpdated();
+      onUpdated(await updateCV(cv.id, { candidateName: candidateName.trim(), file }));
     } catch (err) {
       setError(err.message);
     } finally {

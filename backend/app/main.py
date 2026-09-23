@@ -79,6 +79,8 @@ async def upload_cv(file: UploadFile = File(...), candidate_name: str = Form("")
 async def update_cv(cv_id: str, candidate_name: str | None = Form(None), file: UploadFile | None = File(None)):
     new_filename = new_content_type = new_bytes = new_summary = None
     new_size = None
+    suggested_skills: list[str] = []
+    extraction_note = None
 
     if file is not None and file.filename:
         _validate_file(file)
@@ -92,8 +94,9 @@ async def update_cv(cv_id: str, candidate_name: str | None = Form(None), file: U
         new_size = len(contents)
         new_bytes = contents
 
-        text, _note = skills_extractor.extract_text_from_bytes(contents, file.filename)
-        new_summary = skills_extractor.generate_summary(text, skills_extractor.extract_skills(text) if text else [])
+        text, extraction_note = skills_extractor.extract_text_from_bytes(contents, file.filename)
+        suggested_skills = skills_extractor.extract_skills(text) if text else []
+        new_summary = skills_extractor.generate_summary(text, suggested_skills)
 
     record = storage.update_cv(
         cv_id,
@@ -103,10 +106,15 @@ async def update_cv(cv_id: str, candidate_name: str | None = Form(None), file: U
         new_size=new_size,
         new_file_bytes=new_bytes,
         new_summary=new_summary,
+        # Skills detected from the old file are dropped; hand-added ones (not in the
+        # taxonomy, so never re-detectable) are kept for the review that follows.
+        keep_skill=lambda s: s not in skills_extractor.SKILL_TAXONOMY,
     )
     if record is None:
         raise HTTPException(status_code=404, detail="CV not found.")
-    return record
+    if new_bytes is None:
+        return record
+    return {**record, "suggested_skills": suggested_skills, "extraction_note": extraction_note}
 
 
 @app.delete("/api/cvs/{cv_id}", status_code=204)
