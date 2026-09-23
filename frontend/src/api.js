@@ -60,3 +60,11 @@ export function matchCandidates(jobDescription, useAi = true) {
     body: JSON.stringify({ job_description: jobDescription, use_ai: useAi }),
   }).then(handle);
 }
+
+export function estimateMatch(jobDescription) {
+  return fetch("/api/match/estimate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ job_description: jobDescription }),
+  }).then(handle);
+}

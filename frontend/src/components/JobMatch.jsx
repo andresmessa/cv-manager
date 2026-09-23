@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { matchCandidates } from "../api.js";
+import { estimateMatch, matchCandidates } from "../api.js";
+
+const fmtTokens = (n) => n.toLocaleString();
+const fmtUsd = (n) => `$${n < 0.01 ? n.toFixed(4) : n.toFixed(3)}`;
 
 export default function JobMatch() {
   const [jobDescription, setJobDescription] = useState("");
@@ -7,13 +10,12 @@ export default function JobMatch() {
   const [error, setError] = useState("");
   const [searching, setSearching] = useState(false);
   const [useAi, setUseAi] = useState(true);
+  // Token preview shown before an AI search: { data } on success or { error } if the estimate failed.
+  const [estimate, setEstimate] = useState(null);
+  const [estimating, setEstimating] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!jobDescription.trim()) {
-      setError("Paste a job description to search against.");
-      return;
-    }
+  async function runSearch() {
+    setEstimate(null);
     setError("");
     setSearching(true);
     try {
@@ -25,6 +27,45 @@ export default function JobMatch() {
     }
   }
 
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!jobDescription.trim()) {
+      setError("Paste a job description to search against.");
+      return;
+    }
+    if (!useAi) {
+      await runSearch();
+      return;
+    }
+    // AI on: preview the token cost first; the search runs only after the user confirms.
+    setError("");
+    setEstimating(true);
+    try {
+      const data = await estimateMatch(jobDescription);
+      if (data.candidate_count === 0) {
+        await runSearch();
+        return;
+      }
+      setEstimate({ data });
+    } catch (err) {
+      setEstimate({ error: err.message });
+    } finally {
+      setEstimating(false);
+    }
+  }
+
+  function handleDescriptionChange(value) {
+    setJobDescription(value);
+    setEstimate(null);
+  }
+
+  function handleToggle(checked) {
+    setUseAi(checked);
+    setEstimate(null);
+  }
+
+  const busy = searching || estimating;
+
   return (
     <section className="card">
       <h2>Find Best-Fit Candidates</h2>
@@ -35,22 +76,59 @@ export default function JobMatch() {
             id="job-description"
             rows={6}
             value={jobDescription}
-            onChange={(e) => setJobDescription(e.target.value)}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
             placeholder="Paste the job description here…"
           />
         </div>
         <label className="toggle">
-          <input type="checkbox" checked={useAi} onChange={(e) => setUseAi(e.target.checked)} />
+          <input type="checkbox" checked={useAi} onChange={(e) => handleToggle(e.target.checked)} />
           Use Claude AI for matching
           <span className="hint">
             {useAi ? "Claude reads the description and ranks candidates." : "Keyword matching only — no API call."}
           </span>
         </label>
         {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={searching}>
-          {searching ? (useAi ? "Analyzing…" : "Searching…") : "Find Matches"}
-        </button>
+        {!estimate && (
+          <button type="submit" disabled={busy}>
+            {estimating ? "Estimating…" : searching ? (useAi ? "Analyzing…" : "Searching…") : "Find Matches"}
+          </button>
+        )}
       </form>
+
+      {estimate && (
+        <div className="estimate">
+          {estimate.data ? (
+            <>
+              <p className="estimate-title">Estimated usage for this AI search</p>
+              <ul className="estimate-lines">
+                <li>
+                  <strong>{fmtTokens(estimate.data.input_tokens)}</strong> input tokens (exact)
+                </li>
+                <li>
+                  <strong>
+                    ~{fmtTokens(estimate.data.output_tokens_low)}–{fmtTokens(estimate.data.output_tokens_high)}
+                  </strong>{" "}
+                  output tokens (estimated)
+                </li>
+                <li>
+                  ≈ {fmtUsd(estimate.data.cost_usd_low)}–{fmtUsd(estimate.data.cost_usd_high)} ·{" "}
+                  {estimate.data.candidate_count} candidate(s) · {estimate.data.model}
+                </li>
+              </ul>
+            </>
+          ) : (
+            <p className="error">{estimate.error}</p>
+          )}
+          <div className="estimate-actions">
+            <button type="button" onClick={runSearch} disabled={busy}>
+              {searching ? "Analyzing…" : estimate.data ? "Run AI search" : "Run anyway"}
+            </button>
+            <button type="button" className="secondary" onClick={() => setEstimate(null)} disabled={busy}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {result && (
         <div className="match-output">
@@ -67,7 +145,13 @@ export default function JobMatch() {
             </div>
           )}
 
-          {result.engine === "llm" && <p className="hint">AI-ranked using each candidate's reviewed skills.</p>}
+          {result.engine === "llm" && (
+            <p className="hint">
+              AI-ranked using each candidate's reviewed skills.
+              {result.usage &&
+                ` Used ${fmtTokens(result.usage.input_tokens)} input + ${fmtTokens(result.usage.output_tokens)} output tokens (≈ ${fmtUsd(result.usage.cost_usd)}).`}
+            </p>
+          )}
 
           {result.note && <p className="notice">{result.note}</p>}
 

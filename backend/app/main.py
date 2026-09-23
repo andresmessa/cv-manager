@@ -148,13 +148,7 @@ def save_skills(cv_id: str, payload: SkillsPayload):
 
 @app.post("/api/match")
 def match_candidates(payload: JobDescriptionPayload):
-    job_description = payload.job_description.strip()
-    if not job_description:
-        raise HTTPException(status_code=400, detail="Job description cannot be empty.")
-
-    records = storage.list_cvs()
-    reviewed = [r for r in records if r["skills"]]
-    excluded_count = len(records) - len(reviewed)
+    job_description, reviewed, excluded_count = _prepare_match(payload)
 
     if not reviewed:
         return {
@@ -169,7 +163,7 @@ def match_candidates(payload: JobDescriptionPayload):
         return _keyword_match(job_description, reviewed, excluded_count)
 
     try:
-        analysis = llm_matcher.rank_candidates(job_description, reviewed)
+        analysis, usage = llm_matcher.rank_candidates(job_description, reviewed)
     except llm_matcher.LLMMatchError as e:
         logger.warning("Falling back to keyword matching: %s", e)
         result = _keyword_match(job_description, reviewed, excluded_count)
@@ -202,7 +196,33 @@ def match_candidates(payload: JobDescriptionPayload):
         "excluded_count": excluded_count,
         "note": None,
         "engine": "llm",
+        "usage": usage,
     }
+
+
+@app.post("/api/match/estimate")
+def estimate_match(payload: JobDescriptionPayload):
+    """Previews the token usage of an AI match without running it (count_tokens is free)."""
+    job_description, reviewed, _excluded_count = _prepare_match(payload)
+    if not reviewed:
+        return {"candidate_count": 0, "input_tokens": 0, "note": "No candidates with reviewed skills yet."}
+    try:
+        return llm_matcher.estimate_tokens(job_description, reviewed)
+    except llm_matcher.LLMMatchError as e:
+        logger.warning("Token estimate failed: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail="Couldn't reach the Claude API to estimate tokens. Running the search will fall back to keyword matching.",
+        )
+
+
+def _prepare_match(payload: JobDescriptionPayload) -> tuple[str, list[dict], int]:
+    job_description = payload.job_description.strip()
+    if not job_description:
+        raise HTTPException(status_code=400, detail="Job description cannot be empty.")
+    records = storage.list_cvs()
+    reviewed = [r for r in records if r["skills"]]
+    return job_description, reviewed, len(records) - len(reviewed)
 
 
 def _keyword_match(job_description: str, reviewed: list[dict], excluded_count: int) -> dict:
