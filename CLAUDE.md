@@ -41,8 +41,8 @@ Both servers must be running simultaneously for the app to work end-to-end (see 
 ### Data flow and persistence (`backend/app/storage.py`)
 
 - All CV metadata is a single JSON array in `backend/data/metadata.json`; the file is fully read, mutated, and rewritten on every write operation (`_read_all` / `_write_all`), guarded by one process-wide `threading.Lock`. There is no per-record locking or migration mechanism — schema changes to a CV record mean updating `_read_all`'s `setdefault` calls for backward compatibility with existing entries.
-- Uploaded files are stored under `backend/data/uploads/` renamed to `{uuid4()}{ext}`; the original filename is kept only in metadata (`original_filename`), decoupled from the on-disk `stored_filename`. Replacing a file on update deletes the old blob and writes a new UUID-named one.
-- A CV record: `id, candidate_name, original_filename, stored_filename, content_type, size, skills, uploaded_at, updated_at`.
+- Uploaded files are stored under `backend/data/uploads/` renamed to `{uuid4()}{ext}`; the original filename is kept only in metadata (`original_filename`), decoupled from the on-disk `stored_filename`. Replacing a file on update deletes the old blob and writes a new UUID-named one, regenerates `summary`, and resets `skills` to the hand-added subset (see Frontend structure → Edit with a replacement file).
+- A CV record: `id, candidate_name, original_filename, stored_filename, content_type, size, skills, summary, uploaded_at, updated_at`.
 
 ### Skill extraction and matching (`backend/app/skills_extractor.py`)
 
@@ -86,5 +86,6 @@ CRUD (`GET/POST /api/cvs`, `PUT/DELETE /api/cvs/{id}`) plus skill/matching endpo
 
 - `App.jsx` owns all top-level state (CV list, search filter, which modal is open) and passes callbacks down; there's no router or global store.
 - Upload → `handleUploaded` immediately opens `SkillsReviewModal` with the server's `suggested_skills` so the user reviews before skills are persisted.
+- Edit with a replacement file → `handleEdited` does the same. On a file replace, `PUT /api/cvs/{id}` drops the skills detected from the old file but keeps hand-added ones (any skill not a `SKILL_TAXONOMY` key, since those can't be re-detected) via `storage.update_cv(keep_skill=...)`, and returns `suggested_skills`/`extraction_note` from the new file; the modal is pre-filled with kept + suggested skills. Closing the modal without saving leaves only the hand-added skills saved. A name-only edit returns the plain record and doesn't touch skills.
 - `JobMatch.jsx` is self-contained (its own form/result/AI-toggle state) and calls `POST /api/match` via `matchCandidates`.
 - `api.js` is the only place `fetch` is called; every function funnels through the shared `handle()` helper for error unwrapping (reads `detail` from JSON error bodies).

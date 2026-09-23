@@ -6,6 +6,11 @@ import SkillsReviewModal from "./components/SkillsReviewModal.jsx";
 import JobMatch from "./components/JobMatch.jsx";
 import { listCVs, deleteCV, getSkillSuggestions } from "./api.js";
 
+// Saved skills first, then any suggestions not already present.
+function mergeSkills(saved, suggested) {
+  return [...saved, ...suggested.filter((skill) => !saved.includes(skill))];
+}
+
 export default function App() {
   const [cvs, setCvs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,15 +64,25 @@ export default function App() {
     });
   }
 
+  async function handleEdited(updated) {
+    setEditingCv(null);
+    await refresh();
+    // A replaced file comes back with suggestions (like an upload): review them straight
+    // away, together with the hand-added skills the server kept on the record.
+    if (updated.suggested_skills) {
+      setSkillsReview({
+        cv: updated,
+        initialSkills: mergeSkills(updated.skills, updated.suggested_skills),
+        note: updated.extraction_note ?? null,
+      });
+    }
+  }
+
   async function handleReviewSkills(cv) {
     setError("");
     try {
       const { suggested_skills, extraction_note } = await getSkillSuggestions(cv.id);
-      const merged = [...cv.skills];
-      for (const skill of suggested_skills) {
-        if (!merged.includes(skill)) merged.push(skill);
-      }
-      setSkillsReview({ cv, initialSkills: merged, note: extraction_note });
+      setSkillsReview({ cv, initialSkills: mergeSkills(cv.skills, suggested_skills), note: extraction_note });
     } catch (err) {
       setError(err.message);
     }
@@ -111,10 +126,7 @@ export default function App() {
         <EditCVModal
           cv={editingCv}
           onClose={() => setEditingCv(null)}
-          onUpdated={async () => {
-            setEditingCv(null);
-            await refresh();
-          }}
+          onUpdated={handleEdited}
         />
       )}
 

@@ -1,6 +1,7 @@
 import json
 import threading
 import uuid
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -93,7 +94,10 @@ def update_cv(
     new_size: int | None,
     new_file_bytes: bytes | None,
     new_summary: str | None = None,
+    keep_skill: Callable[[str], bool] | None = None,
 ) -> dict | None:
+    """Updates name and/or file. On a file replacement, skills are reset to the subset
+    `keep_skill` accepts (e.g. hand-added ones) — the rest must be re-reviewed."""
     with _lock:
         records = _read_all()
         record = next((r for r in records if r["id"] == cv_id), None)
@@ -115,7 +119,7 @@ def update_cv(
             record["original_filename"] = new_original_filename
             record["content_type"] = new_content_type
             record["size"] = new_size
-            record["skills"] = []
+            record["skills"] = [s for s in record["skills"] if keep_skill(s)] if keep_skill else []
             record["summary"] = new_summary or ""
 
         record["updated_at"] = datetime.now(timezone.utc).isoformat()
