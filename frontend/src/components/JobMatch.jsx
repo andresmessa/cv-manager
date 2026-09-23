@@ -6,6 +6,7 @@ export default function JobMatch() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [searching, setSearching] = useState(false);
+  const [useAi, setUseAi] = useState(true);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -16,7 +17,7 @@ export default function JobMatch() {
     setError("");
     setSearching(true);
     try {
-      setResult(await matchCandidates(jobDescription));
+      setResult(await matchCandidates(jobDescription, useAi));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -38,9 +39,16 @@ export default function JobMatch() {
             placeholder="Paste the job description here…"
           />
         </div>
+        <label className="toggle">
+          <input type="checkbox" checked={useAi} onChange={(e) => setUseAi(e.target.checked)} />
+          Use Claude AI for matching
+          <span className="hint">
+            {useAi ? "Claude reads the description and ranks candidates." : "Keyword matching only — no API call."}
+          </span>
+        </label>
         {error && <p className="error">{error}</p>}
         <button type="submit" disabled={searching}>
-          {searching ? "Searching…" : "Find Matches"}
+          {searching ? (useAi ? "Analyzing…" : "Searching…") : "Find Matches"}
         </button>
       </form>
 
@@ -48,7 +56,7 @@ export default function JobMatch() {
         <div className="match-output">
           {result.job_description_skills.length > 0 && (
             <div className="field">
-              <label>Skills detected in this job description</label>
+              <label>Skills required by this job</label>
               <div className="skill-chips">
                 {result.job_description_skills.map((skill) => (
                   <span className="skill-chip" key={skill}>
@@ -58,6 +66,8 @@ export default function JobMatch() {
               </div>
             </div>
           )}
+
+          {result.engine === "llm" && <p className="hint">AI-ranked using each candidate's reviewed skills.</p>}
 
           {result.note && <p className="notice">{result.note}</p>}
 
@@ -81,6 +91,7 @@ export default function JobMatch() {
                     <span className="match-percentage">{match.match_percentage}% match</span>
                   </div>
                   <div className="hint">{match.original_filename}</div>
+                  {match.reasoning && <p className="match-reasoning">{match.reasoning}</p>}
                   {match.matched_skills.length > 0 && (
                     <div className="skill-chips">
                       {match.matched_skills.map((skill) => (

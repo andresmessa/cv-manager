@@ -53,10 +53,10 @@ export function saveSkills(id, skills) {
   }).then(handle);
 }
 
-export function matchCandidates(jobDescription) {
+export function matchCandidates(jobDescription, useAi = true) {
   return fetch("/api/match", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ job_description: jobDescription }),
+    body: JSON.stringify({ job_description: jobDescription, use_ai: useAi }),
   }).then(handle);
 }

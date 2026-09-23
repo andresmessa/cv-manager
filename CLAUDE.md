@@ -44,9 +44,15 @@ Both servers must be running simultaneously for the app to work end-to-end (see 
 
 ### Skill extraction and matching (`backend/app/skills_extractor.py`)
 
-- `SKILL_TAXONOMY` is a hand-maintained dict mapping canonical quality-engineering skill names (Six Sigma, ISO 9001, CMM, GD&T, etc.) to lists of alias patterns. Aliases starting with `\b` are treated as regexes matched against lowercased text; everything else is escaped and matched as a literal substring. Extending recognized skills means adding entries here — extraction and job-description parsing both call `extract_skills()`, so the taxonomy is the single source of truth for both directions of matching.
+- `SKILL_TAXONOMY` is a hand-maintained dict mapping canonical quality-engineering skill names (Six Sigma, ISO 9001, CMM, GD&T, etc.) to lists of alias patterns. Aliases starting with `\b` are treated as regexes matched against lowercased text; everything else is escaped and matched as a literal substring. Extending recognized skills means adding entries here. The taxonomy drives upload-time skill suggestions and the keyword fallback for matching.
 - Text is pulled from PDFs via `pypdf` and from `.docx` via `python-docx` (paragraphs + table cells); legacy `.doc` and scanned/text-less PDFs are explicitly unsupported and surface a user-facing note instead of failing silently.
 - Skill suggestions from upload/extraction are never auto-saved — they only become part of a CV's `skills` once the user confirms them through the skills-review flow (`PUT /api/cvs/{id}/skills`). Candidate matching (`POST /api/match`) only considers CVs whose `skills` array is non-empty ("reviewed"); unreviewed CVs are silently excluded and counted in `excluded_count`.
+
+### LLM matching (`backend/app/llm_matcher.py`)
+
+- `POST /api/match` sends the job description plus each reviewed candidate's `{id, skills}` (no names/files) to Claude (`claude-sonnet-5`, via `messages.parse` with a Pydantic `MatchAnalysis` schema). Claude returns the required skills and a 0–100 `fit_score`, matched/missing skills and a short `reasoning` per candidate. `_sanitize` drops unknown ids, restricts `matched_skills` to the candidate's stored skills, and adds any omitted candidate with score 0.
+- Requires `ANTHROPIC_API_KEY` in the backend's environment. Any failure (no key, network, refusal, unparsable output) raises `LLMMatchError`, and `main.py` falls back to `_keyword_match` (taxonomy-based). The response's `engine` field is `"llm"` or `"keyword"`.
+- The request's `use_ai` flag (default `true`; a checkbox in `JobMatch.jsx`) lets the user skip the Claude call and go straight to `_keyword_match`.
 
 ### API surface (`backend/app/main.py`)
 
