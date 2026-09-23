@@ -9,7 +9,7 @@ export default function JobMatch() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [searching, setSearching] = useState(false);
-  const [useAi, setUseAi] = useState(true);
+  const [useAi, setUseAi] = useState(false);
   // Token preview shown before an AI search: { data } on success or { error } if the estimate failed.
   const [estimate, setEstimate] = useState(null);
   const [estimating, setEstimating] = useState(false);

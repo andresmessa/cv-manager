@@ -4,7 +4,7 @@ A small web app for managing candidate CVs (PDF/DOC/DOCX) for quality-engineerin
 
 - **Upload, list, update and delete CVs.**
 - **Skills review** — quality-engineering skills are suggested from each CV's text; the user confirms them before they're saved.
-- **Find best-fit candidates** — paste a job description (free text) and get a ranked list of candidates based on their reviewed skills. Ranking uses **Claude** (Anthropic API) by default, with a keyword-matching option that makes no API call.
+- **Find best-fit candidates** — paste a job description (free text) and get a ranked list of candidates based on their reviewed skills. Ranking uses keyword matching by default (no API call); switch on the AI toggle to have **Claude** (Anthropic API) rank candidates instead.
 
 - **Backend**: Python + FastAPI. Stores files on local disk (`backend/data/uploads/`) and metadata in a JSON file (`backend/data/metadata.json`).
 - **Frontend**: React + Vite.
@@ -51,8 +51,8 @@ Only candidates whose skills have been reviewed are considered.
 
 1. Paste a job description into **Find Best-Fit Candidates**.
 2. Choose the mode with the **Use Claude AI for matching** checkbox:
-   - **On (default)** — clicking **Find Matches** first shows a **token estimate**: exact input tokens, an estimated output-token range, and the approximate cost. Click **Run AI search** to proceed or **Cancel**. Claude (`claude-sonnet-5`) then works out the skills the job requires and ranks every candidate 0–100 with a short explanation, giving partial credit for related skills. The actual tokens used and cost are shown with the results.
-   - **Off** — keyword matching against a built-in skill list. Instant, no API call, but only exact skill matches count.
+   - **Off (default)** — keyword matching against a built-in skill list. Instant, no API call, but only exact skill matches count.
+   - **On** — clicking **Find Matches** first shows a **token estimate**: exact input tokens, an estimated output-token range, and the approximate cost. Click **Run AI search** to proceed or **Cancel**. Claude (`claude-sonnet-5`) then works out the skills the job requires and ranks every candidate 0–100 with a short explanation, giving partial credit for related skills. The actual tokens used and cost are shown with the results.
 3. If the AI call fails (missing/invalid key, network, etc.), the app automatically shows keyword results with the note "AI matching unavailable".
 
 Only each candidate's id and reviewed skills are sent to Claude — no names, filenames or CV contents.
