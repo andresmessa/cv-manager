@@ -422,3 +422,30 @@ button.danger:hover:not(:disabled) {
 .toggle .hint {
   margin: 0;
 }
+
+.estimate {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+
+.estimate-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.estimate-lines {
+  margin: 0 0 12px;
+  padding-left: 18px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.estimate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
