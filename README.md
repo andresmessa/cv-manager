@@ -7,6 +7,8 @@ A small web app for managing candidate CVs (PDF/DOC/DOCX) for quality-engineerin
 - **QA/QM summary** — a short rule-based summary of each candidate's quality experience.
 - **Find best-fit candidates** — paste a job description (free text) and get a ranked list of candidates based on their reviewed skills. Ranking uses keyword matching by default (no API call); switch on the AI toggle to have **Claude** (Anthropic API) rank candidates instead.
 
+The **Upload CV** and **Find Best-Fit Candidates** sections each have a **How it works** button that explains, in plain language, what happens to your data and when AI is (and isn't) used.
+
 - **Backend**: Python + FastAPI. Stores files on local disk (`backend/data/uploads/`) and metadata in a JSON file (`backend/data/metadata.json`).
 - **Frontend**: React + Vite.
 
@@ -98,7 +100,7 @@ backend/
   requirements.txt
 frontend/
   src/
-    components/          # UploadForm, CVList, EditCVModal, SkillsReviewModal, JobMatch
+    components/          # UploadForm, CVList, EditCVModal, SkillsReviewModal, JobMatch, HowItWorks
     api.js               # Backend API client
     App.jsx
   package.json
