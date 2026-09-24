@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { estimateMatch, matchCandidates } from "../api.js";
+import HowItWorks from "./HowItWorks.jsx";
 
 const fmtTokens = (n) => n.toLocaleString();
 const fmtUsd = (n) => `$${n < 0.01 ? n.toFixed(4) : n.toFixed(3)}`;
@@ -68,7 +69,43 @@ export default function JobMatch() {
 
   return (
     <section className="card">
-      <h2>Find Best-Fit Candidates</h2>
+      <HowItWorks title="Find Best-Fit Candidates" panelId="match-help">
+        <p className="help-callout">
+          <strong>AI is optional and off by default.</strong> With the toggle off, matching runs entirely on this
+          computer. With it on, only each candidate&apos;s <em>reviewed skill names</em> and the job description you
+          paste are sent to Claude, never CV text, candidate names or files.
+        </p>
+        <ol>
+          <li>
+            <strong>Who is included:</strong> only candidates whose skills have been reviewed and saved. Candidates
+            with no saved skills are left out, and the results show how many were skipped (e.g. &quot;2 candidate(s)
+            excluded — skills not yet reviewed&quot;). Use <em>Review Skills</em> on them to include them.
+          </li>
+          <li>
+            <strong>Keyword matching (toggle off):</strong> local parsing rules find skills from the built-in
+            quality-engineering list in the job description. Candidates are ranked by how many of those exact skills
+            they have. Instant and free, but different wording or related skills aren&apos;t recognised.
+          </li>
+          <li>
+            <strong>AI matching (toggle on):</strong> you first see a token and cost estimate, and nothing is sent until
+            you click <em>Run AI search</em>. Claude then works out the skills the job needs, even when they&apos;re
+            phrased differently, and scores every candidate 0–100 with a short reason. Related skills get partial
+            credit.
+          </li>
+          <li>
+            <strong>Results:</strong> candidates are ranked by score. Matched skills are shown normally and missing
+            ones are crossed out. After an AI search, the tokens and cost actually used are shown.
+          </li>
+          <li>
+            <strong>Fallback:</strong> if the AI can&apos;t be reached (e.g. missing API key or network problem), you
+            get keyword results with a notice instead.
+          </li>
+        </ol>
+        <p className="hint">
+          The AI only knows each candidate by an internal id and their skill list, so the quality of the ranking
+          depends on how complete the reviewed skills are.
+        </p>
+      </HowItWorks>
       <form onSubmit={handleSubmit}>
         <div className="field">
           <label htmlFor="job-description">Job description</label>
